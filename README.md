@@ -5,7 +5,7 @@ A reusable template for creating Android apps with WebView that load local HTML/
 ## 🚀 Quick Start
 
 1. **Clone this template**
-   ```bash
+```bash
    git clone https://github.com/Goodboycat/android-webview-template.git my-app
    cd my-app
 ```
