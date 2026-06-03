@@ -1,46 +1,538 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <meta name="theme-color" content="#6200EE">
-    <title>WebView App</title>
-    <link rel="stylesheet" href="file:///android_asset/css/app.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0D0D0F">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="محفظتي">
+  <title>محفظتي</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0D0D0F;
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .blob1 {
+      position: fixed; top: -120px; right: -80px;
+      width: 350px; height: 350px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(76,217,100,0.12) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .blob2 {
+      position: fixed; bottom: -100px; left: -60px;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,122,255,0.1) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .container {
+      max-width: 480px; margin: 0 auto;
+      padding: 24px 16px 100px;
+      position: relative; z-index: 1;
+    }
+    /* Flash */
+    .flash {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 999; padding: 10px 24px; border-radius: 30px;
+      color: #000; font-weight: 700; font-size: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap;
+      animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform: translateX(-50%) translateY(-10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 4px; }
+    .total-amount { color: #fff; font-size: 38px; font-weight: 800; line-height: 1.1; }
+    .total-amount .currency { font-size: 18px; font-weight: 400; color: #888; }
+    .spent-label { color: #777; font-size: 12px; margin-top: 4px; }
+    .spent-label span { color: #FF6B6B; }
+    .header-actions { display: flex; gap: 8px; padding-top: 8px; }
+    .icon-btn {
+      background: #1A1A1E; border: 1px solid #2A2A2E; border-radius: 10px;
+      padding: 6px 10px; font-size: 16px; cursor: pointer; color: #fff;
+    }
+    /* Bar */
+    .bar-row {
+      display: flex; height: 6px; border-radius: 6px; overflow: hidden;
+      background: #1A1A1E; margin-bottom: 16px; gap: 1px;
+    }
+    .bar-seg { height: 100%; border-radius: 4px; transition: width .5s ease; }
+    /* Buy button */
+    .buy-btn {
+      width: 100%; background: linear-gradient(135deg, #FF6B6B, #FF9F43);
+      border: none; border-radius: 14px; padding: 14px 20px;
+      color: #fff; font-size: 15px; font-weight: 700; font-family: inherit;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(255,107,107,0.3);
+    }
+    /* Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card {
+      background: #141416; border: 1px solid #222226; border-radius: 16px;
+      padding: 14px 12px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .card-header { display: flex; align-items: center; gap: 6px; }
+    .cat-icon { font-size: 20px; }
+    .cat-label { color: #ccc; font-size: 13px; font-weight: 600; flex: 1; }
+    .delete-btn { background: transparent; border: none; color: #555; font-size: 12px; cursor: pointer; }
+    .val-row { display: flex; flex-direction: column; gap: 6px; }
+    .amount { font-size: 20px; font-weight: 800; line-height: 1; }
+    .egp { font-size: 12px; font-weight: 400; opacity: .7; }
+    .edit-btn {
+      background: transparent; border: 1px solid; border-radius: 8px;
+      padding: 4px 8px; font-size: 11px; cursor: pointer; font-family: inherit; width: fit-content;
+    }
+    .edit-row { display: flex; gap: 4px; align-items: center; }
+    input[type=text], input[type=number] {
+      background: #0D0D0F; border: 1px solid #333; border-radius: 8px;
+      padding: 8px 12px; color: #fff; font-size: 14px; font-family: inherit;
+      width: 100%; outline: none; text-align: right;
+    }
+    .save-btn { border: none; border-radius: 8px; padding: 6px 10px; color: #fff; font-size: 14px; cursor: pointer; font-weight: 700; }
+    .cancel-btn { background: #2A2A2E; border: none; border-radius: 8px; padding: 6px 10px; color: #aaa; font-size: 14px; cursor: pointer; }
+    .pct-bar { height: 3px; background: #222; border-radius: 4px; overflow: hidden; }
+    .pct-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+    .pct-label { color: #555; font-size: 10px; text-align: left; }
+    /* Add card */
+    .add-card {
+      background: transparent; border: 1.5px dashed #2A2A2E; border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6px; cursor: pointer; min-height: 100px; width: 100%;
+    }
+    .add-icon { font-size: 28px; color: #444; }
+    .add-text { color: #444; font-size: 12px; }
+    .add-title { color: #aaa; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .emoji-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .emoji-btn { border: 1px solid #333; border-radius: 8px; padding: 4px 6px; font-size: 16px; cursor: pointer; color: #fff; background: transparent; }
+    .emoji-btn.active { background: #333; }
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 100; display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal {
+      background: #141416; border-radius: 20px 20px 0 0;
+      padding: 20px 16px 36px; width: 100%; max-width: 480px;
+      max-height: 88vh; overflow-y: auto; border: 1px solid #222226;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-title { color: #fff; font-size: 16px; font-weight: 700; }
+    label { color: #888; font-size: 12px; display: block; margin-bottom: 6px; margin-top: 12px; }
+    .exp-cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .exp-cat-btn {
+      background: #1A1A1E; border: 1px solid #2A2A2E; border-radius: 20px;
+      padding: 5px 10px; color: #aaa; font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+    .exp-cat-btn.active { background: #FF9F43; border-color: #FF9F43; color: #000; font-weight: 700; }
+    .src-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 4px; }
+    .src-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 8px 12px; border: 1.5px solid #2A2A2E; border-radius: 12px;
+      cursor: pointer; min-width: 70px; flex-shrink: 0; background: #0D0D0F;
+      font-family: inherit;
+    }
+    .src-btn .src-icon { font-size: 18px; }
+    .src-btn .src-name { font-size: 11px; color: #ccc; }
+    .src-btn .src-bal { font-size: 11px; font-weight: 700; }
+    .src-btn.disabled { opacity: .4; pointer-events: none; }
+    .error-text { color: #FF6B6B; font-size: 12px; margin-top: 8px; }
+    .confirm-btn {
+      width: 100%; background: linear-gradient(135deg, #FF6B6B, #FF9F43);
+      border: none; border-radius: 12px; padding: 13px; color: #fff;
+      font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 16px;
+    }
+    /* History */
+    .history-box { margin-top: 24px; background: #141416; border: 1px solid #222226; border-radius: 16px; padding: 16px; }
+    .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .history-title { color: #fff; font-size: 15px; font-weight: 700; }
+    .empty-text { color: #555; text-align: center; font-size: 13px; }
+    .hist-entry { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1E1E22; }
+    .hist-icon { font-size: 20px; }
+    .hist-info { display: flex; flex-direction: column; flex: 1; }
+    .hist-cat { color: #ccc; font-size: 13px; font-weight: 600; }
+    .hist-sub { color: #666; font-size: 11px; }
+    .hist-date { color: #555; font-size: 11px; }
+    .hist-amounts { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .hist-diff { font-weight: 700; font-size: 13px; }
+    .hist-bal { color: #555; font-size: 10px; }
+    .footer { text-align: center; color: #333; font-size: 11px; margin-top: 24px; }
+    /* Install banner */
+    .install-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: #1A1A1E; border-top: 1px solid #2A2A2E;
+      padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+      max-width: 480px; margin: 0 auto;
+    }
+    .install-banner p { color: #ccc; font-size: 13px; flex: 1; }
+    .install-banner p strong { color: #fff; }
+    .install-now-btn {
+      background: linear-gradient(135deg, #4CD964, #007AFF);
+      border: none; border-radius: 10px; padding: 8px 14px;
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .install-dismiss { background: transparent; border: none; color: #555; font-size: 18px; cursor: pointer; }
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <div class="header">
-            <h1>🚀 WebView App Template</h1>
-            <p>Your Android WebView app is ready!</p>
-        </div>
-        
-        <div class="content">
-            <h2>Welcome to Your App</h2>
-            <p>This is a mobile-optimized web app running in Android WebView.</p>
-            
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h3>Mobile Optimized</h3>
-                    <p>Responsive design that works on all devices.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Fast Loading</h3>
-                    <p>Local assets load instantly.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Auto Updates</h3>
-                    <p>GitHub Actions builds APK automatically.</p>
-                </div>
-            </div>
-            
-            <button class="btn" onclick="showWelcome()">Get Started</button>
-        </div>
-    </div>
+<div class="blob1"></div>
+<div class="blob2"></div>
 
-    <script>
-        function showWelcome() {
-            alert('Welcome! Add your HTML/CSS/JS files to build your app.');
-        }
-    </script>
+<div id="flash" class="flash hidden"></div>
+
+<!-- Install Banner -->
+<div id="installBanner" class="install-banner hidden">
+  <p>📲 ثبّت <strong>محفظتي</strong> على شاشتك الرئيسية!</p>
+  <button class="install-now-btn" onclick="installApp()">تثبيت</button>
+  <button class="install-dismiss" onclick="document.getElementById('installBanner').classList.add('hidden')">✕</button>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <p class="subtitle">إجمالي فلوسك</p>
+      <h1 class="total-amount"><span id="totalVal">0.00</span><span class="currency"> ج.م</span></h1>
+      <p class="spent-label" id="spentRow" style="display:none">صرفت: <span id="spentVal">0</span> ج.م</p>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="toggleHistory()" title="السجل">📋</button>
+      <button class="icon-btn" onclick="resetAll()" title="إعادة تعيين">🔄</button>
+    </div>
+  </div>
+
+  <!-- Bar -->
+  <div class="bar-row" id="barRow"></div>
+
+  <!-- Buy Button -->
+  <button class="buy-btn" onclick="openBuy()">
+    <span style="font-size:20px">🛍️</span> سجّل مشترياتك
+  </button>
+
+  <!-- Categories Grid -->
+  <div class="grid" id="grid"></div>
+
+  <!-- History -->
+  <div class="history-box hidden" id="historyBox">
+    <div class="history-header">
+      <h3 class="history-title">📋 سجل المعاملات</h3>
+      <button class="icon-btn" onclick="toggleHistory()">✕</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <p class="footer">البيانات محفوظة على جهازك ✓</p>
+</div>
+
+<!-- Buy Modal -->
+<div class="modal-overlay hidden" id="buyModal" onclick="closeBuyIfOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🛍️ مشتريات جديدة</h3>
+      <button class="icon-btn" onclick="closeBuy()">✕</button>
+    </div>
+    <label>اشتريت إيه؟</label>
+    <input type="text" id="buyName" placeholder="مثال: قهوة، تاكسي، جاكيت...">
+    <label>نوع المصروف</label>
+    <div class="exp-cat-row" id="expCatRow"></div>
+    <label>التمن (ج.م)</label>
+    <input type="number" id="buyAmount" placeholder="0.00">
+    <label>هتدفع منين؟</label>
+    <div class="src-row" id="srcRow"></div>
+    <p class="error-text hidden" id="buyError"></p>
+    <button class="confirm-btn" onclick="confirmBuy()">✓ تأكيد الخصم</button>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────────
+const BASE_CATS = [
+  { id:"wallet",   label:"المحفظة",     icon:"👛", color:"#F5A623" },
+  { id:"instapay", label:"انستا باي",   icon:"📱", color:"#4CD964" },
+  { id:"bank",     label:"البنك",        icon:"🏦", color:"#007AFF" },
+  { id:"vodafone", label:"فودافون كاش", icon:"💳", color:"#E53935" },
+  { id:"other",    label:"أخرى",         icon:"💰", color:"#AF52DE" },
+];
+const EXP_CATS = ["🍔 أكل","🚗 مواصلات","🛒 تسوق","💊 صحة","🎮 ترفيه","📚 تعليم","🏠 إيجار","أخرى"];
+const CUSTOM_COLORS = ["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#C77DFF","#FF9F43"];
+
+let amounts   = load("moneyAmounts", {});
+let customCats= load("customCats",   []);
+let history   = load("moneyHistory", []);
+let selectedExpCat = "أخرى";
+let selectedSrc    = "";
+let editingId      = null;
+
+function load(k, def){ try{ return JSON.parse(localStorage.getItem(k))||def; }catch{return def;} }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function allCats(){ return [...BASE_CATS, ...customCats]; }
+function fmtNum(n){ return Number(n||0).toLocaleString("ar-EG",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function nowDate(){ return new Date().toLocaleDateString("ar-EG"); }
+function nowTime(){ return new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); }
+
+// ─── Flash ──────────────────────────────────────────────────────────────────
+function flash(msg, color="#4CD964"){
+  const el = document.getElementById("flash");
+  el.textContent = msg; el.style.background = color;
+  el.classList.remove("hidden");
+  clearTimeout(flash._t);
+  flash._t = setTimeout(()=>el.classList.add("hidden"), 2500);
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+function render(){
+  save("moneyAmounts", amounts);
+  save("customCats",   customCats);
+  save("moneyHistory", history);
+
+  const cats = allCats();
+  const total = cats.reduce((s,c)=>s+Number(amounts[c.id]||0),0);
+  const spent = history.filter(h=>h.type==="expense").reduce((s,h)=>s+h.amount,0);
+
+  // header
+  document.getElementById("totalVal").textContent = fmtNum(total);
+  const spentRow = document.getElementById("spentRow");
+  if(spent>0){ spentRow.style.display="block"; document.getElementById("spentVal").textContent=fmtNum(spent); }
+  else spentRow.style.display="none";
+
+  // bar
+  const bar = document.getElementById("barRow");
+  bar.innerHTML = "";
+  cats.forEach(c=>{
+    const pct = total>0 ? Math.round(Number(amounts[c.id]||0)/total*100) : 0;
+    if(!pct) return;
+    const seg = document.createElement("div");
+    seg.className="bar-seg"; seg.style.width=pct+"%"; seg.style.background=c.color;
+    seg.title=`${c.label}: ${pct}%`; bar.appendChild(seg);
+  });
+
+  // grid
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  cats.forEach(c=>{
+    const val = Number(amounts[c.id]||0);
+    const pct = total>0 ? Math.round(val/total*100) : 0;
+    const isCustom = customCats.find(x=>x.id===c.id);
+    const card = document.createElement("div");
+    card.className="card"; card.style.borderTop=`3px solid ${c.color}`;
+
+    if(editingId===c.id){
+      card.innerHTML=`
+        <div class="card-header"><span class="cat-icon">${c.icon}</span><span class="cat-label">${c.label}</span></div>
+        <div class="edit-row">
+          <input type="number" id="editInput_${c.id}" value="${amounts[c.id]||""}" placeholder="0.00" style="flex:1">
+          <button class="save-btn" style="background:${c.color}" onclick="saveEdit('${c.id}')">✓</button>
+          <button class="cancel-btn" onclick="cancelEdit()">✕</button>
+        </div>`;
+      setTimeout(()=>{const el=document.getElementById(`editInput_${c.id}`);if(el){el.focus();el.select();}},50);
+    } else {
+      card.innerHTML=`
+        <div class="card-header">
+          <span class="cat-icon">${c.icon}</span>
+          <span class="cat-label">${c.label}</span>
+          ${isCustom?`<button class="delete-btn" onclick="deleteCat('${c.id}')">✕</button>`:""}
+        </div>
+        <div class="val-row">
+          <span class="amount" style="color:${c.color}">${fmtNum(val)} <span class="egp">ج.م</span></span>
+          <button class="edit-btn" style="border-color:${c.color};color:${c.color}" onclick="startEdit('${c.id}')">✏️ تعديل</button>
+        </div>
+        ${total>0?`<div class="pct-bar"><div class="pct-fill" style="width:${pct}%;background:${c.color}"></div></div><p class="pct-label">${pct}% من الإجمالي</p>`:""}`;
+    }
+    grid.appendChild(card);
+  });
+
+  // Add category card
+  const addCard = document.createElement("div");
+  if(window._showAddCat){
+    addCard.className="card"; addCard.style.borderTop="3px dashed #888";
+    addCard.innerHTML=`
+      <p class="add-title">فئة جديدة</p>
+      <div class="emoji-row" id="emojiPickerRow"></div>
+      <input type="text" id="newCatName" placeholder="اسم الفئة" style="margin-bottom:8px">
+      <div style="display:flex;gap:6px">
+        <button class="save-btn" style="background:#4CD964;flex:1" onclick="addCat()">إضافة</button>
+        <button class="cancel-btn" style="flex:1" onclick="window._showAddCat=false;render()">إلغاء</button>
+      </div>`;
+    grid.appendChild(addCard);
+    const emojis=["💵","💸","🏧","📲","🪙","💎","🎯","🛒"];
+    const row=document.getElementById("emojiPickerRow");
+    emojis.forEach(e=>{
+      const btn=document.createElement("button");
+      btn.className="emoji-btn"+(window._newIcon===e?" active":"");
+      btn.textContent=e; btn.onclick=()=>{window._newIcon=e;render();};
+      row.appendChild(btn);
+    });
+  } else {
+    addCard.className="add-card";
+    addCard.innerHTML=`<span class="add-icon">+</span><span class="add-text">فئة جديدة</span>`;
+    addCard.onclick=()=>{window._showAddCat=true;window._newIcon="💵";render();};
+    grid.appendChild(addCard);
+  }
+
+  renderHistory();
+}
+
+// ─── Edit ────────────────────────────────────────────────────────────────────
+function startEdit(id){ editingId=id; render(); }
+function cancelEdit(){ editingId=null; render(); }
+function saveEdit(id){
+  const val = parseFloat(document.getElementById(`editInput_${id}`)?.value);
+  if(!isNaN(val)&&val>=0){
+    const old=Number(amounts[id]||0);
+    const cat=allCats().find(c=>c.id===id);
+    history=[{id:Date.now(),type:"balance",date:nowDate(),time:nowTime(),cat:cat?.label,icon:cat?.icon,from:old,to:val,diff:val-old},...history].slice(0,100);
+    amounts[id]=val;
+  }
+  editingId=null; render();
+}
+
+// ─── Categories ──────────────────────────────────────────────────────────────
+function addCat(){
+  const name=document.getElementById("newCatName")?.value?.trim();
+  if(!name) return;
+  const id="custom_"+Date.now();
+  const color=CUSTOM_COLORS[customCats.length%CUSTOM_COLORS.length];
+  customCats.push({id,label:name,icon:window._newIcon||"💵",color});
+  window._showAddCat=false; render();
+}
+function deleteCat(id){
+  customCats=customCats.filter(c=>c.id!==id);
+  delete amounts[id]; render();
+}
+
+// ─── Reset ───────────────────────────────────────────────────────────────────
+function resetAll(){
+  if(!confirm("هتعمل reset لكل الأرقام؟")) return;
+  allCats().forEach(c=>amounts[c.id]=0); render();
+}
+
+// ─── History ─────────────────────────────────────────────────────────────────
+function toggleHistory(){
+  document.getElementById("historyBox").classList.toggle("hidden"); renderHistory();
+}
+function renderHistory(){
+  const list=document.getElementById("historyList");
+  if(!list) return;
+  if(!history.length){ list.innerHTML=`<p class="empty-text">مفيش معاملات لسه</p>`; return; }
+  list.innerHTML=history.map(h=>`
+    <div class="hist-entry">
+      <span class="hist-icon">${h.icon}</span>
+      <div class="hist-info">
+        ${h.type==="expense"
+          ?`<span class="hist-cat">${h.name}</span><span class="hist-sub">${h.expCat} · من ${h.cat}</span>`
+          :`<span class="hist-cat">${h.cat} — تعديل رصيد</span>`}
+        <span class="hist-date">${h.date} · ${h.time}</span>
+      </div>
+      <div class="hist-amounts">
+        <span class="hist-diff" style="color:${h.diff>=0?'#4CD964':'#FF6B6B'}">${h.diff>=0?"+":""}${fmtNum(h.diff)}</span>
+        <span class="hist-bal">${fmtNum(h.to)} ج.م</span>
+      </div>
+    </div>`).join("");
+}
+
+// ─── Buy Modal ───────────────────────────────────────────────────────────────
+function openBuy(){
+  selectedExpCat="أخرى"; selectedSrc="";
+  document.getElementById("buyName").value="";
+  document.getElementById("buyAmount").value="";
+  document.getElementById("buyError").classList.add("hidden");
+
+  // exp cats
+  const ecRow=document.getElementById("expCatRow");
+  ecRow.innerHTML="";
+  EXP_CATS.forEach(ec=>{
+    const btn=document.createElement("button");
+    btn.className="exp-cat-btn"+(ec===selectedExpCat?" active":"");
+    btn.textContent=ec;
+    btn.onclick=()=>{
+      selectedExpCat=ec;
+      ecRow.querySelectorAll(".exp-cat-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+    };
+    ecRow.appendChild(btn);
+  });
+
+  renderSrcRow();
+  document.getElementById("buyModal").classList.remove("hidden");
+  setTimeout(()=>document.getElementById("buyName").focus(), 300);
+}
+function renderSrcRow(){
+  const sr=document.getElementById("srcRow");
+  sr.innerHTML="";
+  allCats().forEach(c=>{
+    const bal=Number(amounts[c.id]||0);
+    const btn=document.createElement("button");
+    btn.className="src-btn"+(bal===0?" disabled":"");
+    btn.style.borderColor=selectedSrc===c.id?c.color:"#2A2A2E";
+    btn.style.background=selectedSrc===c.id?c.color+"22":"#0D0D0F";
+    btn.innerHTML=`<span class="src-icon">${c.icon}</span><span class="src-name">${c.label}</span><span class="src-bal" style="color:${c.color}">${fmtNum(bal)}</span>`;
+    btn.onclick=()=>{ selectedSrc=c.id; renderSrcRow(); };
+    sr.appendChild(btn);
+  });
+}
+function closeBuy(){ document.getElementById("buyModal").classList.add("hidden"); }
+function closeBuyIfOverlay(e){ if(e.target===document.getElementById("buyModal")) closeBuy(); }
+function confirmBuy(){
+  const errEl=document.getElementById("buyError");
+  errEl.classList.add("hidden");
+  const name=document.getElementById("buyName").value.trim();
+  const amt=parseFloat(document.getElementById("buyAmount").value);
+  if(!name){ showBuyError("اكتب اسم المشتريات"); return; }
+  if(isNaN(amt)||amt<=0){ showBuyError("اكتب مبلغ صح"); return; }
+  if(!selectedSrc){ showBuyError("اختار هتدفع منين"); return; }
+  const bal=Number(amounts[selectedSrc]||0);
+  if(amt>bal){ showBuyError(`المبلغ أكبر من الرصيد! عندك ${fmtNum(bal)} ج.م فقط`); return; }
+  const cat=allCats().find(c=>c.id===selectedSrc);
+  const newBal=bal-amt;
+  amounts[selectedSrc]=newBal;
+  history=[{id:Date.now(),type:"expense",date:nowDate(),time:nowTime(),name,expCat:selectedExpCat,cat:cat?.label,icon:"🛍️",amount:amt,from:bal,to:newBal,diff:-amt},...history].slice(0,100);
+  flash(`✓ اتخصم ${fmtNum(amt)} ج.م من ${cat?.label}`);
+  closeBuy(); render();
+}
+function showBuyError(msg){
+  const el=document.getElementById("buyError");
+  el.textContent="⚠️ "+msg; el.classList.remove("hidden");
+}
+
+// ─── PWA Install ─────────────────────────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById("installBanner").classList.remove("hidden");
+});
+function installApp(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; document.getElementById("installBanner").classList.add("hidden"); });
+}
+window.addEventListener("appinstalled",()=>{ document.getElementById("installBanner").classList.add("hidden"); });
+
+// ─── Service Worker ───────────────────────────────────────────────────────────
+if("serviceWorker" in navigator){
+  const swCode=`
+const CACHE="mahfazati-v1";
+const FILES=["./"];
+self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
+self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+  `;
+  const blob=new Blob([swCode],{type:"application/javascript"});
+  const swUrl=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(()=>{});
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+render();
+</script>
 </body>
 </html>
