@@ -40,21 +40,3 @@ jobs:
         name: TTRPG-Advance-Toolkit-APK
         path: app/build/outputs/apk/debug/app-debug.apk
         retention-days: 7
-name: Build Android APK
-
-fillColor="${RANDOM_COLOR}" android:pathData="M0,0h108v108h-108z"/>
-        </vector>
-        EOF
-        
-        # 3. Duplicate it for the round icon fallback to satisfy the manifest
-        cp app/src/main/res/mipmap/ic_launcher.xml app/src/main/res/mipmap/ic_launcher_round.xml
-
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: TTRPG-Advance-Toolkit-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 7
