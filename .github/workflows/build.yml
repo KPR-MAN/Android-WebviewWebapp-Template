@@ -22,12 +22,20 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x ./gradlew
 
-    - name: Generate Random Dummy Icon
+     - name: Generate Random Dummy Icon
       run: |
         RANDOM_COLOR=$(printf '#%06X\n' $((RANDOM%16777215)))
         echo "Using background color: $RANDOM_COLOR"
         
-        # Overwrite background with random color
+        # 1. Nuke ALL existing launcher files to prevent Android from using higher-priority folders (-v24, -anydpi, etc.)
+        find app/src/main/res -name "ic_launcher*" -type f -delete
+        
+        # 2. Recreate the necessary directories
+        mkdir -p app/src/main/res/drawable
+        mkdir -p app/src/main/res/mipmap-anydpi-v26
+        mkdir -p app/src/main/res/mipmap
+        
+        # 3. Create the background
         cat <<EOF > app/src/main/res/drawable/ic_launcher_background.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -35,7 +43,7 @@ jobs:
         </vector>
         EOF
         
-        # Overwrite foreground with transparent vector
+        # 4. Create the transparent foreground
         cat <<EOF > app/src/main/res/drawable/ic_launcher_foreground.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -43,8 +51,21 @@ jobs:
         </vector>
         EOF
         
-        # Strip out any legacy PNG icons so the system relies on the XML
-        find app/src/main/res -name "ic_launcher*.png" -type f -delete
+        # 5. Point the adaptive icons to our new drawables for modern devices
+        cat <<EOF > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@drawable/ic_launcher_background" />
+            <foreground android:drawable="@drawable/ic_launcher_foreground" />
+        </adaptive-icon>
+        EOF
+        
+        cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+        
+        # 6. Create legacy base files so the build doesn't crash looking for older fallbacks
+        cp app/src/main/res/drawable/ic_launcher_background.xml app/src/main/res/mipmap/ic_launcher.xml
+        cp app/src/main/res/drawable/ic_launcher_background.xml app/src/main/res/mipmap/ic_launcher_round.xml
+
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
